@@ -14,6 +14,12 @@ An intelligent, conversational AI fitness assistant designed to provide personal
 
 ---
 
+## 💡 Development Process
+
+The core agentic logic for this application was prototyped and tested using [Langflow](https://www.langflow.org/). This allowed for rapid iteration on prompt engineering and flow design before implementing the final logic in Python for the Streamlit application.
+
+---
+
 ## 🛠️ Tech Stack
 
 - **Framework:** [Streamlit](https://streamlit.io/)
