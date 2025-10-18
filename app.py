@@ -17,28 +17,48 @@ st.set_page_config(page_title="AI Fitness Assistant", page_icon="💪", layout="
 def detect_intent(text: str) -> str:
     """
     Return one of: 'nutrition', 'workout', or 'other'.
-    Analyzes text (like an AI's response) to see if it's a plan.
+    Analyzes text (like an AI's response) to see if it's a plan
+    by counting keywords.
     """
     text = (text or "").lower()
     
-    # NEW: Expanded keywords to better catch plan types
+    # Added more specific keywords to improve accuracy
     workout_keywords = [
         'workout', 'exercise', 'gym', 'lift', 'hiit', 'cardio', 'strength', 
-        'plan', 'routine', 'sets', 'reps', 'weekly grid', 'day 1', 'mon -'
+        'routine', 'sets', 'reps', 'weekly grid', 'day 1', 'mon -', 'tue -', 
+        'wed -', 'thu -', 'fri -', 'sat -', 'sun -', 'push-up', 'squat', 
+        'dumbbell', 'circuit', 'warm-up', 'cool-down'
     ]
     nutrition_keywords = [
         'diet', 'food', 'meal', 'nutrition', 'snack', 'calorie', 'protein', 
-        'kcal', 'carb', 'recipe', 'breakfast', 'lunch', 'dinner', 'meal plan'
+        'kcal', 'carb', 'recipe', 'breakfast', 'lunch', 'dinner', 'meal plan',
+        'yogurt', 'chicken', 'quinoa', 'oats', 'macros'
     ]
 
-    # Check workout first as it's often more specific
-    if any(word in text for word in workout_keywords):
+    # --- NEW: Count the keywords ---
+    workout_score = 0
+    nutrition_score = 0
+
+    for word in workout_keywords:
+        if word in text:
+            workout_score += 1
+            
+    for word in nutrition_keywords:
+        if word in text:
+            nutrition_score += 1
+
+    # --- FIX: Return the category with the higher score ---
+    # Only save if there's a clear winner (score > 0)
+    if workout_score > nutrition_score and workout_score > 0:
         return 'workout'
-    if any(word in text for word in nutrition_keywords):
+    if nutrition_score > workout_score and nutrition_score > 0:
         return 'nutrition'
+    
+    # If scores are equal or zero, it's not a plan
     return 'other'
 
 def get_system_prompt(profile: dict) -> str:
+# ... (rest of your code is unchanged) ...
     """
     Creates a dynamic system prompt based on the user's profile.
     """
