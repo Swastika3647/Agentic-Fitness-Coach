@@ -3,8 +3,7 @@ import streamlit as st
 from datetime import date
 import pandas as pd
 
-# Import Groq client only if you intend to use it.
-# If you don't have groq installed or want to use OpenAI, replace call_model accordingly.
+# Import Groq client
 try:
     from groq import Groq
     _HAS_GROQ = True
@@ -16,88 +15,84 @@ st.set_page_config(page_title="AI Fitness Assistant", page_icon="💪", layout="
 
 # ---------- HELPERS ----------
 def detect_intent(text: str) -> str:
-    """Return one of: 'medical', 'nutrition', 'workout', 'motivation'."""
+    """
+    Return one of: 'nutrition', 'workout', or 'other'.
+    Analyzes text (like an AI's response) to see if it's a plan.
+    """
     text = (text or "").lower()
-    medical_keywords = [
-        'pain', 'injury', 'hurt', 'doctor', 'hospital', 'medical',
-        'arthritis', 'chest', 'headache', 'sick', 'sore', 'ill',
+    
+    # NEW: Expanded keywords to better catch plan types
+    workout_keywords = [
+        'workout', 'exercise', 'gym', 'lift', 'hiit', 'cardio', 'strength', 
+        'plan', 'routine', 'sets', 'reps', 'weekly grid', 'day 1', 'mon -'
     ]
-    workout_keywords = ['workout', 'exercise', 'gym', 'lift', 'hiit', 'cardio', 'strength']
-    nutrition_keywords = ['diet', 'food', 'meal', 'nutrition', 'snack', 'calorie', 'protein', 'kcal', 'carb', 'recipe']
+    nutrition_keywords = [
+        'diet', 'food', 'meal', 'nutrition', 'snack', 'calorie', 'protein', 
+        'kcal', 'carb', 'recipe', 'breakfast', 'lunch', 'dinner', 'meal plan'
+    ]
 
-    if any(word in text for word in medical_keywords):
-        return 'medical'
-    if any(word in text for word in nutrition_keywords):
-        return 'nutrition'
+    # Check workout first as it's often more specific
     if any(word in text for word in workout_keywords):
         return 'workout'
-    return 'motivation'
+    if any(word in text for word in nutrition_keywords):
+        return 'nutrition'
+    return 'other'
 
-def generate_prompt(intent: str, user_input: str) -> str:
-    """Format the prompt to send to the model based on intent."""
-    base = (
-        "You are a helpful, concise fitness assistant.\n"
-        f"User intent: {intent}\n"
-        f"User message: {user_input}\n\n"
-    )
-    if intent == 'workout':
-        base += (
-            "Return: a short structured exercise plan (exercises, sets, reps, rest). "
-            "Keep it practical and safe for a general audience."
-        )
-    elif intent == 'nutrition':
-        base += (
-            "Return: a 1-day meal plan with approximate calorie estimates and a quick macro breakdown. "
-            "Ask questions only if necessary."
-        )
-    elif intent == 'medical':
-        base += (
-            "Return: a short non-diagnostic safety-first response that encourages consulting a healthcare professional. "
-            "Do NOT give medical diagnoses or prescriptions."
-        )
-    else:
-        base += "Return: a short motivational message or quote with 1-2 actionable tips."
-    return base
-
-def call_model(api_key: str, prompt: str) -> str:
+def get_system_prompt(profile: dict) -> str:
     """
-    Call the Groq model (or return helpful errors). 
-    Replace implementation here if you want to use a different provider.
+    Creates a dynamic system prompt based on the user's profile.
+    """
+    return (
+        "You are a helpful, expert fitness assistant. "
+        "You MUST tailor your responses to the user's profile.\n"
+        "Here is the user's profile:\n"
+        f"- Name: {profile['name']}\n"
+        f"- Age: {profile['age']}\n"
+        f"- Sex: {profile['sex']}\n"
+        f"- Main Goal: {profile['goal']}\n\n"
+        "Your duties:\n"
+        "1.  **Nutrition:** If asked for meal plans, provide them tailored to the user's goal (e.g., calorie deficit for 'Weight Loss').\n"
+        "2.  **Workouts:** If asked for exercises, create plans suitable for their goal. Give structured plans (e.g., 'WEEKLY GRID', 'Day 1: ...', 'Sets/Reps: ...').\n"
+        "3.  **Motivation:** If asked for motivation, provide concise, actionable tips.\n"
+        "4.  **Medical:** If the user mentions pain, injury, or medical issues, "
+        "   you MUST respond with a disclaimer: 'I am an AI, not a medical professional. "
+        "   Please consult a healthcare professional for any medical advice or concerns.' Do NOT provide any diagnosis or treatment.\n"
+        "5.  **Context:** Pay close attention to the chat history to understand follow-up questions."
+    )
+
+def call_model(api_key: str, system_prompt: str, messages: list) -> str:
+    """
+    Call the Groq model with the full conversation history.
     """
     if not api_key:
         return "⚠️ No API key provided. Please enter your Groq API key in the sidebar."
-
     if not _HAS_GROQ:
-        return "⚠️ Groq client library not installed in this environment. Install `groq` or replace call_model with another client."
+        return "⚠️ Groq client library not installed. Install `groq`."
 
+    full_message_list = [{"role": "system", "content": system_prompt}] + messages
+    
     try:
         client = Groq(api_key=api_key)
         response = client.chat.completions.create(
             model="moonshotai/kimi-k2-instruct",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": prompt},
-            ],
+            messages=full_message_list,
         )
         return response.choices[0].message.content
     except Exception as e:
-        # Log minimal info and return friendly error
         return f"⚠️ Error calling model: {e}"
 
 # ---------- SIDEBAR ----------
-# --- SIDEBAR ---
 st.sidebar.title("💪 Fitness AI")
-st.sidebar.markdown("...") # Your markdown link
+st.sidebar.markdown("...")  # Your markdown link
 
-# Securely get the API key from secrets for deployment 🔑
-api_key = st.secrets["GROQ_API_KEY"]
+api_key = st.secrets.get("GROQ_API_KEY")
+if not api_key:
+    st.sidebar.warning("GROQ_API_KEY not found in secrets.")
+    api_key = st.sidebar.text_input("Enter your Groq API Key:", type="password", key="local_api_key")
 
 st.sidebar.markdown("---")
 st.sidebar.header("Your Profile")
-# ... (the rest of your sidebar code for Name, Age, Sex, etc.)
-st.sidebar.markdown("---")
-st.sidebar.header("Your Profile")
-default_name = "Swastika"  # friendly default from your context
+default_name = "Swastika"
 name = st.sidebar.text_input("Name", value=default_name, key="profile_name")
 age = st.sidebar.number_input("Age", min_value=10, max_value=100, value=20, key="profile_age")
 sex = st.sidebar.selectbox("Sex", ["Female", "Male", "Other"], key="profile_sex")
@@ -105,14 +100,18 @@ goal = st.sidebar.selectbox("Goal", ["Weight Loss", "Muscle Gain", "Endurance", 
 st.sidebar.write(f"🏁 Goal: **{goal}**")
 st.sidebar.caption(f"App last updated: {date.today().strftime('%d %b %Y')}")
 st.sidebar.markdown("---")
-st.sidebar.write("Tip: Don't hardcode your API key into the file. Use the sidebar or `secrets.toml`.")
+st.sidebar.write("Tip: Don't hardcode your API key. Use the sidebar or `secrets.toml`.")
 
 # ---------- NAVIGATION ----------
 page = st.sidebar.radio("Go to", ["Chat Assistant", "Dashboard"], index=0)
 
 # ---------- SESSION STATE SETUP ----------
 if "messages" not in st.session_state:
-    st.session_state.messages = []  # list of dicts: {"role": "user"/"assistant", "content": str}
+    st.session_state.messages = []
+if "workout_plans" not in st.session_state:
+    st.session_state.workout_plans = []
+if "meal_plans" not in st.session_state:
+    st.session_state.meal_plans = []
 
 # ---------- DASHBOARD PAGE ----------
 if page == "Dashboard":
@@ -123,66 +122,66 @@ if page == "Dashboard":
     col2.metric("Age", age)
     col3.metric("Sex", sex)
 
-    st.subheader("🏋️ Weekly Workout Plan (example)")
-    data = {
-        "Day": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
-        "Workout": [
-            "Chest & Triceps", "Back & Biceps", "Legs", "Core + Cardio", "Shoulders", "Yoga/Active Rest"
-        ],
-        "Duration (mins)": [60, 55, 65, 40, 50, 30],
-    }
-    df = pd.DataFrame(data)
-    st.table(df)
-
-    st.subheader("📈 Weekly Workout Duration (mins)")
-    st.line_chart(df["Duration (mins)"])
-    st.caption(f"Last updated: {date.today().strftime('%d %B %Y')}")
+    st.subheader("My Generated Meal Plans")
+    if not st.session_state.meal_plans:
+        st.info("No meal plans generated yet. Go to the Chat Assistant to create one!")
+    else:
+        # Show newest plans first
+        for i, plan in enumerate(reversed(st.session_state.meal_plans)):
+            with st.expander(f"Meal Plan {len(st.session_state.meal_plans) - i}"):
+                st.markdown(plan)
+    
+    st.subheader("My Generated Workout Plans")
+    if not st.session_state.workout_plans:
+        st.info("No workout plans generated yet. Go to the Chat Assistant to create one!")
+    else:
+        # Show newest plans first
+        for i, plan in enumerate(reversed(st.session_state.workout_plans)):
+            with st.expander(f"Workout Plan {len(st.session_state.workout_plans) - i}"):
+                st.markdown(plan)
 
 # ---------- CHAT PAGE ----------
 elif page == "Chat Assistant":
     st.title("💬 Fitness Chat Assistant")
 
-    # Display previous messages
     if st.session_state.messages:
         for msg in st.session_state.messages:
-            role = msg.get("role", "assistant")
-            content = msg.get("content", "")
-            with st.chat_message(role):
-                st.markdown(content)
+            with st.chat_message(msg["role"]):
+                st.markdown(msg["content"])
 
-    # Single chat input (unique key)
     user_input = st.chat_input("Ask me about workouts, meals, or motivation!", key="fitness_chat")
 
     if user_input:
-        # Append and display user message
         st.session_state.messages.append({"role": "user", "content": user_input})
         with st.chat_message("user"):
             st.markdown(user_input)
 
-        # Detect intent
-        intent = detect_intent(user_input)
-
-        # Medical intent - show immediate safety response (no external call)
-        if intent == 'medical':
-            disclaimer = (
-                "**Disclaimer:** I am an AI assistant, not a medical professional. "
-                "For anything that sounds like an injury, persistent pain, or an emergency please consult a qualified healthcare professional."
-            )
-            with st.chat_message("assistant"):
-                st.warning(disclaimer)
-            st.session_state.messages.append({"role": "assistant", "content": disclaimer})
-        else:
-            # Build prompt and call model
-            prompt = generate_prompt(intent, user_input)
-            with st.chat_message("assistant"):
-                # Show a temporary placeholder while generating (Streamlit will render immediately)
-                st.markdown("🤖 Generating response...")
-            # Call model (synchronously)
-            model_reply = call_model(api_key, prompt)
-            # Replace placeholder by appending next message (simple approach)
-            with st.chat_message("assistant"):
+        profile_data = {"name": name, "age": age, "sex": sex, "goal": goal}
+        system_prompt = get_system_prompt(profile_data)
+        
+        with st.chat_message("assistant"):
+            with st.status("🤖 Generating response...", expanded=True) as status:
+                model_reply = call_model(
+                    api_key, 
+                    system_prompt, 
+                    st.session_state.messages
+                )
                 st.markdown(model_reply)
-            st.session_state.messages.append({"role": "assistant", "content": model_reply})
+                status.update(label="Response generated!", state="complete")
+        
+        st.session_state.messages.append({"role": "assistant", "content": model_reply})
+
+        # --- NEW: SAVE TO DASHBOARD ---
+        # Analyze the AI's response to see if it's a plan
+        response_intent = detect_intent(model_reply)
+        
+        if response_intent == 'workout':
+            st.session_state.workout_plans.append(model_reply)
+            st.toast("Workout plan saved to dashboard!")
+        elif response_intent == 'nutrition':
+            st.session_state.meal_plans.append(model_reply)
+            st.toast("Meal plan saved to dashboard!")
+        # -------------------------------
 
 # ---------- FOOTER ----------
 st.markdown("---")
