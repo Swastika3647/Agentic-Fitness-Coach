@@ -23,7 +23,7 @@ def detect_intent(text: str) -> str:
         'arthritis', 'chest', 'headache', 'sick', 'sore', 'ill',
     ]
     workout_keywords = ['workout', 'exercise', 'gym', 'lift', 'hiit', 'cardio', 'strength']
-    nutrition_keywords = ['diet', 'food', 'meal', 'nutrition', 'snack', 'calorie', 'protein', 'kcal', 'carb']
+    nutrition_keywords = ['diet', 'food', 'meal', 'nutrition', 'snack', 'calorie', 'protein', 'kcal', 'carb', 'recipe']
 
     if any(word in text for word in medical_keywords):
         return 'medical'
