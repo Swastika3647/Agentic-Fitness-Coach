@@ -6,9 +6,9 @@ An intelligent, conversational AI fitness assistant designed to provide personal
 This project was a group submission. The primary development, including all coding, bug-fixing, and deployment, was led by **Swastika Bhattacharjee**.
 
 * **Project Lead & Core Developer:** [@Swastika3647](https://github.com/Swastika3647)
-* **Group Member:** 
-* **Group Member:** 
-   * **Group Member:** 
+* **Rijit Banerjee:** 
+* **Riddhita Dastidar:** 
+* **Anujit Swaranakar:** 
 
 For a detailed breakdown of all work, please see the [**project commit history**](https://github.com/Swastika3647/Agentic-Fitness-Coach/commits/main).
 
