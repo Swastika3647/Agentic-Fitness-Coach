@@ -7,7 +7,7 @@ This project was a group submission. The primary development, including all codi
 
 * **Project Lead & Core Developer:** [@Swastika3647](https://github.com/Swastika3647)
 * **Rijit Banerjee:** 
-* **Riddhita Dastidar:** 
+* **Riddhita Dastidar:** App Coding [@dastidariddhita](https://github.com/dastidariddhita)
 * **Anujit Swaranakar:** 
 
 For a detailed breakdown of all work, please see the [**project commit history**](https://github.com/Swastika3647/Agentic-Fitness-Coach/commits/main).
