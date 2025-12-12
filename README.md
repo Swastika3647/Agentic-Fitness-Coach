@@ -13,7 +13,14 @@ This project was a group submission. The primary development, including all codi
 For a detailed breakdown of all work, please see the [**project commit history**](https://github.com/Swastika3647/Agentic-Fitness-Coach/commits/main).
 
 ---
+## 🔬 Research & Evaluation
+Unlike standard wrapper applications, this project includes a **Black-Box Robustness Evaluation** pipeline to test agent alignment in Indian cultural contexts.
 
+* **Benchmark:** 50 diverse user profiles (Diabetic, PCOD, Regional constraints).
+* **Methodology:** LLM-as-a-Judge evaluation using `research_benchmarks/evaluate.py`.
+* **Metric:** Custom safety and hallucination scoring (+10/-10).
+
+Current results show high accuracy for general queries but specific alignment failures in **Gluten Sensitivity** and **Lactose Intolerance** scenarios, which are currently being addressed via DSPy optimization.
 ## ✨ Features
 
 - **Conversational AI Coach:** Get instant, human-like responses for your fitness queries.
